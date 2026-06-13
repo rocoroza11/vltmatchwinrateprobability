@@ -1,0 +1,58 @@
+{
+  "team_id": 2593,
+  "team_name": "FNATIC",
+  "team_tag": "FNC",
+  "country": "Europe",
+  "matches": [
+    {
+      "team1": "FNATIC",
+      "team2": "Natus Vincere",
+      "score": "1-2"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "Karmine Corp",
+      "score": "2-3"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "BBL Esports",
+      "score": "2-0"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "Team Heretics",
+      "score": "1-2"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "Team Vitality",
+      "score": "0-2"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "BBL Esports",
+      "score": "2-0"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "GIANTX",
+      "score": "2-1"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "PCIFIC Esports",
+      "score": "2-0"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "Team Vitality",
+      "score": "2-0"
+    },
+    {
+      "team1": "FNATIC",
+      "team2": "Eternal Fire",
+      "score": "2-1"
+    }
+  ]
+}
