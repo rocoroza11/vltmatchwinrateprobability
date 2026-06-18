@@ -56,4 +56,5 @@ class SearchSeriesResult:
     url: str
     name: str | None = None
     image_url: str | None = None
-    result_type: Literal["series"] = "series"
+    result_type: Literal["series"] = "series"#
+

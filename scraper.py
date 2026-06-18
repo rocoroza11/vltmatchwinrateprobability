@@ -30,3 +30,4 @@ with open("matches.json", "w", encoding="utf-8") as f:
 
 print(f"Wrote {len(matches)} matches to matches.json")
 
+    
