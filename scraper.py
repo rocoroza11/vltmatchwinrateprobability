@@ -1,33 +1,42 @@
-import vlrdevapi as vlr 
-import json 
+import vlrdevapi as vlr
+import json
+from dataclasses import asdict
 
-completed = vlr.teams.completed_matches(team_id = 2593, limit=10)
+team_id = 2593
 
-team = vlr.teams.info(team_id=2593)
-print(f"{team.name} ({team.tag}) - {team.country}")
+team = vlr.teams.info(team_id=team_id)
+completed = vlr.teams.completed_matches(team_id=team_id, limit=10)
 
-matches = []
+matches_data = []
 for match in completed:
-    team1 = match.team1.name
-    team2 = match.team2.name
-    score = f"{match.team1.score}-{match.team2.score}"
-    matches.append({
-        "team1": team1,
-        "team2": team2,
-        "score": score
+    if not match.match_id:
+        continue
+
+    maps = vlr.series.matches(series_id=match.match_id)
+    maps_data = []
+    for map_data in maps:
+        rounds_data = [asdict(r) for r in map_data.rounds] if map_data.rounds else []
+        maps_data.append({
+            "map_name": map_data.map_name,
+            "rounds": rounds_data,
+        })
+
+    matches_data.append({
+        "match_id": match.match_id,
+        "team1": match.team1.name,
+        "team2": match.team2.name,
+        "maps": maps_data,
     })
 
 output = {
-    "team_id": 2593,
+    "team_id": team_id,
     "team_name": team.name,
     "team_tag": team.tag,
     "country": team.country,
-    "matches": matches
+    "matches": matches_data,
 }
 
-with open("matches.json", "w", encoding="utf-8") as f:
+with open("rounds_raw.json", "w", encoding="utf-8") as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
 
-print(f"Wrote {len(matches)} matches to matches.json")
-
-    
+print(f"Wrote {len(matches_data)} matches with round data to rounds_raw.json")
