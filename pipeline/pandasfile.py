@@ -1,21 +1,22 @@
-import json 
-import pandas as pd 
+import json
+import pandas as pd
 
-with open("matches.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+def load_rounds_dataframe(json_path="rounds_raw.json"):
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-df = pd.DataFrame(data["matches"])
+    team_tag = data["team_tag"]
+    rows = []
 
-df[["team1_score", "team2_score"]] = df["score"].str.split("-", expand=True).astype(int)
+    for match in data["matches"]:
+        for map_data in match["maps"]:
+            for r in map_data["rounds"]:
+                row = {
+                    "match_id": match["match_id"],
+                    "map_name": map_data["map_name"],
+                    **r,  # number, winner_team_short, method, score, + anything else found
+                }
+                row["won_by_queried_team"] = r.get("winner_team_short") == team_tag
+                rows.append(row)
 
-df["result"] = df.apply(
-    lambda row: "W" if row["team1_score"] > row["team2_score"] else "L",
-    axis=1
-)
-
-df["score_diff"] = df["team1_score"] - df["team2_score"]
-
-df["result"].value_counts() 
-
-print(df)
-
+    return pd.DataFrame(rows)
