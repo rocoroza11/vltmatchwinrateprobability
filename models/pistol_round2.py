@@ -8,9 +8,9 @@ def pistol_round2_probabilities(rounds_df):
         index=["match_id", "map_name"],
         columns="number",
         values="won_by_queried_team",
+        aggfunc="first",
     )
 
-    
     results = []
     for pistol_round in [1, 13]:
         round2 = pistol_round + 1
@@ -21,7 +21,7 @@ def pistol_round2_probabilities(rounds_df):
         subset = pivot[[pistol_round, round2]].dropna()
 
         # categorise each element in each row by col
-        subset.columns = ["won_pistol", "won_round2"]
+        subset = subset.rename(columns={pistol_round: "won_pistol", round2: "won_round2"})
 
         # make column for won pistol rounds 
         pistol_wins = subset[subset["won_pistol"] == True]
