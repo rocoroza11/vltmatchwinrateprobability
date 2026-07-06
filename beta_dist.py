@@ -12,6 +12,14 @@ result_dataframe = pistol_round2_probabilities(rounds_df)
 wins = (result_dataframe["n_pistol_wins"]   * result_dataframe["p_win_round2_given_pistol"]).round().astype(int)
 losses = (result_dataframe["n_pistol_wins"] - wins)
 
+total_wins = wins.sum() 
+total_trials = (wins + losses).sum()
+global_mean = total_wins / total_trials
+
+n0 = 10
+prior_alpha = global_mean * n0
+prior_beta = (1 - global_mean) * n0
+
 def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
     alpha_post = prior_alpha + wins 
@@ -19,14 +27,17 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
     return beta(alpha_post, beta_post)
 
-posterior = beta_posterior(wins, losses, prior_alpha = 1 , prior_beta= 1 )
+posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
 
+print(prior_alpha)
+print(prior_beta)
 
 mean = posterior.mean()
 ci_lower = posterior.ppf(0.025)
 ci_upper = posterior.ppf(0.975)
 ci_width = ci_upper - ci_lower
- 
+
+
 print(mean)
 print(ci_lower)
 print(ci_upper)
