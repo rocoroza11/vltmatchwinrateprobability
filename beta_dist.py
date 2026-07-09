@@ -1,18 +1,25 @@
 from pipeline.pandasfile import load_rounds_dataframe
 from models.pistol_round2 import pistol_round2_probabilities
+from interface import file_load
 
 from scipy.stats import beta 
 import pandas as pd 
 
-json_file_loaded = ("rounds_raw.json")
-rounds_df = load_rounds_dataframe(json_file_loaded)
-
+game_file = input("Enter filepath: ").strip()
+file_content, file_loaded = file_load(game_file)
+ 
+if not file_loaded:
+    raise FileNotFoundError(f"Could not load game file: {game_file}")
+ 
+rounds_df = load_rounds_dataframe(game_file)
+print("The file loaded successfully.")
+ 
 result_dataframe = pistol_round2_probabilities(rounds_df)
 
-wins = (result_dataframe["n_pistol_wins"]   * result_dataframe["p_win_round2_given_pistol"]).round().astype(int)
+wins = (result_dataframe["n_pistol_wins"]  * result_dataframe["p_win_round2_given_pistol"]).round().astype(int)
 losses = (result_dataframe["n_pistol_wins"] - wins)
 
-total_wins = wins.sum() 
+total_wins = wins.sum()
 total_trials = (wins + losses).sum()
 global_mean = total_wins / total_trials
 
@@ -28,6 +35,9 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
     return beta(alpha_post, beta_post)
 
 posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
+
+print(wins)
+print(losses)
 
 print(prior_alpha)
 print(prior_beta)
