@@ -6,7 +6,7 @@ from scipy.stats import beta
 import pandas as pd 
 
 game_file = input("Enter filepath: ").strip()
-file_content, file_loaded = file_load(game_file)
+file_loaded = file_load(game_file)
  
 if not file_loaded:
     raise FileNotFoundError(f"Could not load game file: {game_file}")
@@ -16,8 +16,8 @@ print("The file loaded successfully.")
  
 result_dataframe = pistol_round2_probabilities(rounds_df)
 
-wins = (result_dataframe["n_pistol_wins"]  * result_dataframe["p_win_round2_given_pistol"]).round().astype(int)
-losses = (result_dataframe["n_pistol_wins"] - wins)
+wins = result_dataframe["n_win_round2"]
+losses = result_dataframe["n_pistol_wins"] - wins
 
 total_wins = wins.sum()
 total_trials = (wins + losses).sum()

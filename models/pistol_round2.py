@@ -28,11 +28,16 @@ def pistol_round2_probabilities(rounds_df):
         if len(pistol_wins) == 0:
             continue
 
+        n_win_round2 = pistol_wins["won_round2"].sum()
+        n_pistol_wins = len(pistol_wins)
+
+
         # append probabilistic columns to dataframe 
         results.append({
             "pistol_round": pistol_round,
-            "n_pistol_wins": len(pistol_wins),
-            "p_win_round2_given_pistol": pistol_wins["won_round2"].mean(),
+            "n_pistol_wins": n_pistol_wins,
+            "n_win_round2" : n_win_round2,
+            "p_win_round2_given_pistol": n_win_round2 / n_pistol_wins
         })
 
     return pd.DataFrame(results)
