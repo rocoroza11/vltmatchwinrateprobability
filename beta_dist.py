@@ -39,6 +39,8 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
     wins = result_dataframe["n_win_round2"]
     losses = result_dataframe["n_pistol_wins"] - wins
 
+    row_side = result_dataframe["fnc_side"]
+
     if (prior_alpha is None) != (prior_beta is None):
         raise ValueError("prior_alpha and prior_beta must be supplied together, or not at all.")
 
@@ -54,6 +56,7 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
     result_dataframe["wins"] = wins
     result_dataframe["losses"] = losses
+    result_dataframe["fnc_side"] = row_side
     result_dataframe["prior_alpha"] = prior_alpha
     result_dataframe["prior_beta"] = prior_beta
     result_dataframe["posterior_mean"] = posterior.mean()

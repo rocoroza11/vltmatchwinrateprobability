@@ -6,6 +6,7 @@ def load_rounds_dataframe(json_path="rounds_raw.json"):
         data = json.load(f)
 
     team_tag = data["team_tag"]
+    team_id = data["team_id"]
     rows = []
 
     for match in data["matches"]:
@@ -17,6 +18,7 @@ def load_rounds_dataframe(json_path="rounds_raw.json"):
                     **r,  # number, winner_team_short, method, score, + anything else found
                 }
                 row["won_by_queried_team"] = r.get("winner_team_short") == team_tag
+                row["fnc_side"] = fnc_side(r, team_id)
                 rows.append(row)
 
     return pd.DataFrame(rows)
