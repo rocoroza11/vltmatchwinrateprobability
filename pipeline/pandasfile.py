@@ -20,3 +20,9 @@ def load_rounds_dataframe(json_path="rounds_raw.json"):
                 rows.append(row)
 
     return pd.DataFrame(rows)
+
+def fnc_side(round_, fnc_team_id):
+    if round_["winner_team_id"] == fnc_team_id:
+        return round_["winner_side"]
+    else:
+        return "Defender" if round_["winner_side"] == "Attacker" else "Attacker"
