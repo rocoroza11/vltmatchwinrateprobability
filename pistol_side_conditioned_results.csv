@@ -1,0 +1,5 @@
+pistol_round,fnc_side,n_pistol_wins,n_win_round2,p_win_round2_given_pistol
+1,Attacker,9,9,1.0
+1,Defender,7,6,0.8571428571428571
+13,Attacker,7,6,0.8571428571428571
+13,Defender,7,6,0.8571428571428571
