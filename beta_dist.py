@@ -63,9 +63,3 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
     return result_dataframe
 
-
-if __name__ == "__main__":
-    game_file = input("Enter filepath: ").strip()
-    result_dataframe = analyze_pistol_conversions(game_file)
-    print("The file loaded successfully.")
-    print(result_dataframe)
