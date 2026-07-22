@@ -10,8 +10,8 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
     alpha_post = prior_alpha + wins
     beta_post = prior_beta + losses
-    
-    return beta(alpha_post, beta_post)
+
+    return alpha_post, beta_post, beta(alpha_post, beta_post)
 
 
 def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=10):
@@ -50,12 +50,14 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
         prior_alpha = global_mean * n0
         prior_beta = (1 - global_mean) * n0
 
-    posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
+    alpha_post, beta_post, posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
 
     result_dataframe["wins"] = wins
     result_dataframe["losses"] = losses
     result_dataframe["prior_alpha"] = prior_alpha
     result_dataframe["prior_beta"] = prior_beta
+    result_dataframe["alpha_post"] = alpha_post
+    result_dataframe["beta_post"] = beta_post
     result_dataframe["posterior_mean"] = posterior.mean()
     result_dataframe["ci_lower"] = posterior.ppf(0.025)
     result_dataframe["ci_upper"] = posterior.ppf(0.975)
