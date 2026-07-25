@@ -1,6 +1,14 @@
 from beta_dist import analyze_pistol_conversions
+from montecarlo import simulate_round2_wins, melt_mc_draws, validate_mc_against_posterior
 from interface import file_write
 
 game_file="rounds_raw.json"
-result = analyze_pistol_conversions(game_file)
-file_write(result)
+beta_result = analyze_pistol_conversions(game_file) #beta-dist pipeline
+mc_result = simulate_round2_wins(beta_result) #monte-carlo pipeline
+mc_draws = melt_mc_draws(mc_result)  #write results into cells 
+
+sanity_check = validate_mc_against_posterior(mc_draws, beta_result)
+
+file_write(beta_result, "pistol_side_conditioned_results.csv")
+file_write(mc_draws, "mc_draws.csv")
+file_write(sanity_check, "sanity_check.csv")

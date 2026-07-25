@@ -15,6 +15,7 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
 
 def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=10):
+    
     """
     Compute Beta posteriors for pistol-round -> round-2 conversion.
 
