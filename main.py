@@ -7,6 +7,8 @@ beta_result = analyze_pistol_conversions(game_file) #beta-dist pipeline
 mc_result = simulate_round2_wins(beta_result) #monte-carlo pipeline
 mc_draws = melt_mc_draws(mc_result)  #write results into cells 
 
+print(type(mc_draws))
+
 sanity_check = validate_mc_against_posterior(mc_draws, beta_result)
 
 file_write(beta_result, "pistol_side_conditioned_results.csv")
