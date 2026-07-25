@@ -10,11 +10,12 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
     alpha_post = prior_alpha + wins
     beta_post = prior_beta + losses
-    
-    return beta(alpha_post, beta_post)
+
+    return alpha_post, beta_post, beta(alpha_post, beta_post)
 
 
 def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=10):
+    
     """
     Compute Beta posteriors for pistol-round -> round-2 conversion.
 
@@ -39,8 +40,6 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
     wins = result_dataframe["n_win_round2"]
     losses = result_dataframe["n_pistol_wins"] - wins
 
-    row_side = result_dataframe["fnc_side"]
-
     if (prior_alpha is None) != (prior_beta is None):
         raise ValueError("prior_alpha and prior_beta must be supplied together, or not at all.")
 
@@ -52,13 +51,14 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
         prior_alpha = global_mean * n0
         prior_beta = (1 - global_mean) * n0
 
-    posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
+    alpha_post, beta_post, posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
 
     result_dataframe["wins"] = wins
     result_dataframe["losses"] = losses
-    result_dataframe["fnc_side"] = row_side
     result_dataframe["prior_alpha"] = prior_alpha
     result_dataframe["prior_beta"] = prior_beta
+    result_dataframe["alpha_post"] = alpha_post
+    result_dataframe["beta_post"] = beta_post
     result_dataframe["posterior_mean"] = posterior.mean()
     result_dataframe["ci_lower"] = posterior.ppf(0.025)
     result_dataframe["ci_upper"] = posterior.ppf(0.975)
@@ -66,9 +66,3 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
     return result_dataframe
 
-
-if __name__ == "__main__":
-    game_file = input("Enter filepath: ").strip()
-    result_dataframe = analyze_pistol_conversions(game_file)
-    print("The file loaded successfully.")
-    print(result_dataframe)
