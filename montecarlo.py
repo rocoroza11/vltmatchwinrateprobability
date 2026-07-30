@@ -104,8 +104,6 @@ def Pr1_Pr13(mc_result):
     )
     atk_result = (atk_merged["sampled_p_r1"] > atk_merged["sampled_p_r13"]).mean()
 
-    atk_length_res = len(atk_merged)
-
     def_merged = pd.merge(
         def_side[def_side["pistol_round"] == 1],
         def_side[def_side["pistol_round"] == 13],
@@ -114,7 +112,5 @@ def Pr1_Pr13(mc_result):
     )
     def_result = (def_merged["sampled_p_r1"] > def_merged["sampled_p_r13"]).mean()
 
-    def_length_res = len(def_merged)
-
-    return atk_length_res, def_length_res, atk_result, def_result
+    return atk_result, def_result
 

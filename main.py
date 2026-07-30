@@ -9,6 +9,7 @@ mc_result = simulate_round2_wins(beta_result) #monte-carlo pipeline
 mc_draws = melt_mc_draws(mc_result)  #write results into cells 
 res_tuple = Pr1_Pr13(mc_draws)
 
+
 sanity_check = validate_mc_against_posterior(mc_draws, beta_result)
 
 file_write(beta_result, "pistol_side_conditioned_results.csv")
