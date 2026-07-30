@@ -5,11 +5,21 @@ from dataclasses import asdict
 team_id = 2593
 
 team = vlr.teams.info(team_id=team_id)
-completed = vlr.teams.completed_matches(team_id=team_id, limit=10)
+completed = vlr.teams.completed_matches(team_id=team_id, limit=20)
 
 matches_data = []
 for match in completed:
     if not match.match_id:
+        continue
+
+    # match_datetime is already a datetime object (or None) - no parsing needed
+    if match.match_datetime is None:
+        continue
+
+    if match.match_datetime.year < 2026:
+        # matches are newest-first, so we can stop once we hit 2025
+        break
+    if match.match_datetime.year != 2026:
         continue
 
     maps = vlr.series.matches(series_id=match.match_id)

@@ -5,7 +5,7 @@ from dataclasses import asdict
 team_id = 2593
 
 team = vlr.teams.info(team_id=team_id)
-completed = vlr.teams.completed_matches(team_id=team_id, limit=10)
+completed = vlr.teams.completed_matches(team_id=team_id, limit=12)
 
 matches_data = []
 for match in completed:
