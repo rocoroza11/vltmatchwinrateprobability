@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 
+
 def simulate_round2_wins(result_dataframe, n_trials=10_000, random_state=None):
     """
     For each cell (row) in result_dataframe, draw n_trials samples from its
@@ -76,3 +77,44 @@ def validate_mc_against_posterior(mc_draws, beta_result):
     comparison["ci_upper_diff"] = comparison["mc_ci_upper"] - comparison["ci_upper"]
 
     return comparison
+
+
+
+"""Mechanically it's simple given what you already have: 
+- draw n_trials samples from Beta(alpha_post_r1, beta_post_r1), 
+- draw the same count from Beta(alpha_post_r13, ...), 
+-then (samples_r1 > samples_r13).mean(). """
+
+# take a random sample of 10k from round 1->2 and round 13->14 (from the dataframe i presume)
+# take the mean of all round 1 samples and mean of all round 13 samples and compare (?)
+# or do a direct 1:1 comparison 
+# return a dataframe of the results 
+
+def Pr1_Pr13(mc_result):
+    # Filter sides
+    atk_side = mc_result[mc_result["fnc_side"] == "Attacker"]
+    def_side = mc_result[mc_result["fnc_side"] == "Defender"]
+
+    # Merge round 1 and round 13 on trial_id
+    atk_merged = pd.merge(
+        atk_side[atk_side["pistol_round"] == 1],
+        atk_side[atk_side["pistol_round"] == 13],
+        on="trial_id",
+        suffixes=("_r1", "_r13")
+    )
+    atk_result = (atk_merged["sampled_p_r1"] > atk_merged["sampled_p_r13"]).mean()
+
+    atk_length_res = len(atk_merged)
+
+    def_merged = pd.merge(
+        def_side[def_side["pistol_round"] == 1],
+        def_side[def_side["pistol_round"] == 13],
+        on="trial_id",
+        suffixes=("_r1", "_r13")
+    )
+    def_result = (def_merged["sampled_p_r1"] > def_merged["sampled_p_r13"]).mean()
+
+    def_length_res = len(def_merged)
+
+    return atk_length_res, def_length_res, atk_result, def_result
+
