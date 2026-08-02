@@ -1,114 +1,228 @@
 """
-Sketch: per-map partial pooling on top of the existing pistol-round pipeline.
+Per-map partial pooling on top of the existing pistol-round pipeline.
 
-Idea
-----
-Fitting an independent Beta-Binomial per (pistol_round, side, map) cell fails
-because most maps will only have a handful of pistol rounds in the dataset.
-Instead of fully independent fits, we do a TWO-STAGE cascade:
+Symbols below match project_notes_map_pooling.md exactly -- check there if
+a name looks unfamiliar. In short: theta_i/v_i (per-map), p_hat (naive,
+intermediate only), tau2, p_hat_star (the real pooled mean, formerly
+called theta_RE), M/alpha_hyper/beta_hyper (the hyperprior).
 
-  Stage 1 (what you already have): pool across all maps to get a global
-           posterior for each (pistol_round, side) cell. This uses your
-           existing weak prior (alpha=8.98, beta=1.02).
+Pipeline (three stages):
+    Stage A: fit_per_map_jeffreys   -> per-map theta_i, v_i (Jeffreys prior)
+    Stage B: estimate_hyperprior    -> per-cell tau2, p_hat_star, hyperprior
+    Stage C: fit_per_map_final      -> per-map final Beta posterior
 
-  Stage 2 (new): treat that GLOBAL posterior as the informative prior for
-           each individual map, then update it with just that map's data.
+fit_global (Stage-0, no map conditioning) is UNCHANGED from before -- kept
+as the existing baseline for comparison, not touched by any of this.
 
-This is mathematically just chained conjugate updating, but it behaves like
-partial pooling: maps with few pistol rounds barely move away from the
-global estimate (shrinkage ~0), maps with lots of rounds pull toward their
-own empirical rate (shrinkage ~1). No MCMC required, fits directly on top
-of what you already built.
-
-Required input columns (extend your existing per-round table with map_name):
+Required input columns (per-round-per-map table you build upstream):
     pistol_round, fnc_side, map_name, wins, losses
+
+Open items not yet resolved here (see project_notes_map_pooling.md Sec 4):
+    - min-k gate is a soft FLAG only right now, not a suppression
+    - tau2==0 fallback: uses fit_global's posterior for that cell (one
+      option from the notes doc -- revisit if a different fallback is
+      preferred)
+    - tau2 > ceiling fallback: clips tau2 just under the ceiling and flags
+      the row; does not silently produce invalid negative alpha/beta
 """
 
 import pandas as pd
 import numpy as np
 from scipy.stats import beta as beta_dist
 
-# Same weak prior you're already using for the pooled fit
+# ---------------------------------------------------------------------------
+# Stage 0 (existing, unchanged) -- plain (round, side) pooled fit, no map
+# conditioning. Kept as the baseline everything else compares against.
+# ---------------------------------------------------------------------------
+
 GLOBAL_PRIOR_ALPHA = 8.983050847457628
 GLOBAL_PRIOR_BETA = 1.0169491525423724
 
 
 def fit_global(df, round_col="pistol_round", side_col="fnc_side",
                wins_col="wins", losses_col="losses"):
-    """Stage 1 — identical to your current pooled fit. Ignores map_name."""
+    """Identical to your current pooled fit. Ignores map_name."""
     grp = df.groupby([round_col, side_col])[[wins_col, losses_col]].sum()
     grp["alpha_post"] = GLOBAL_PRIOR_ALPHA + grp[wins_col]
     grp["beta_post"] = GLOBAL_PRIOR_BETA + grp[losses_col]
     return grp
 
 
-def fit_per_map(df, global_post, map_col="map_name",
-                round_col="pistol_round", side_col="fnc_side",
-                wins_col="wins", losses_col="losses", ci=0.95):
-    """
-    Stage 2 — cascade the global posterior down as each map's prior.
+# ---------------------------------------------------------------------------
+# Stage A -- per-map Jeffreys fit. Replaces the old cascading fit_per_map.
+# Jeffreys (0.5, 0.5) is used specifically because its posterior variance
+# is never exactly zero, which the next stage's weights (1/v_i) require.
+# ---------------------------------------------------------------------------
 
-    shrinkage_weight tells you how much a map's estimate reflects its own
-    data vs the pooled global estimate:
-        weight = n_map / (n_map + alpha0 + beta0)
-    weight -> 0  : estimate is basically the global rate (map has ~no data)
-    weight -> 1  : estimate is basically the map's raw empirical rate
+JEFFREYS_ALPHA = 0.5
+JEFFREYS_BETA = 0.5
+
+
+def fit_per_map_jeffreys(df, active_maps=None, map_col="map_name",
+                          round_col="pistol_round", side_col="fnc_side",
+                          wins_col="wins", losses_col="losses"):
     """
-    lo_q, hi_q = (1 - ci) / 2, 1 - (1 - ci) / 2
+    Stage A: independent Jeffreys-prior fit per map, per (round, side) cell.
+
+    active_maps: optional list/set of map names currently in competitive
+    rotation. If given, retired maps are dropped before fitting -- their
+    old-meta data shouldn't feed the current hyperprior. Newly-added maps
+    need no special handling here; they're naturally down-weighted later
+    by their own small sample size.
+
+    Returns one row per (pistol_round, fnc_side, map_name) with raw counts
+    kept alongside theta_i/v_i, per the "never reconstruct counts from a
+    rate" rule.
+    """
+    work = df if active_maps is None else df[df[map_col].isin(active_maps)]
+
     rows = []
-    for (rnd, side), sub in df.groupby([round_col, side_col]):
-        a0 = global_post.loc[(rnd, side), "alpha_post"]
-        b0 = global_post.loc[(rnd, side), "beta_post"]
+    for (rnd, side), sub in work.groupby([round_col, side_col]):
         for map_name, m in sub.groupby(map_col):
-            w, l = m[wins_col].sum(), m[losses_col].sum()
-            n_map = w + l
-            a_post, b_post = a0 + w, b0 + l
+            wins_i = m[wins_col].sum()
+            losses_i = m[losses_col].sum()
+            a_i = JEFFREYS_ALPHA + wins_i
+            b_i = JEFFREYS_BETA + losses_i
+            theta_i = a_i / (a_i + b_i)
+            v_i = (a_i * b_i) / ((a_i + b_i) ** 2 * (a_i + b_i + 1))
             rows.append({
                 "pistol_round": rnd,
                 "fnc_side": side,
                 "map_name": map_name,
-                "n_map_pistols": n_map,
-                "posterior_mean": a_post / (a_post + b_post),
-                "ci_lower": beta_dist.ppf(lo_q, a_post, b_post),
-                "ci_upper": beta_dist.ppf(hi_q, a_post, b_post),
-                "shrinkage_weight": n_map / (n_map + a0 + b0),
+                "wins_i": wins_i,
+                "losses_i": losses_i,
+                "n_i": wins_i + losses_i,
+                "theta_i": theta_i,
+                "v_i": v_i,
             })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------------------
+# Stage B -- DerSimonian-Laird hyperprior estimation, per (round, side) cell.
+# ---------------------------------------------------------------------------
+
+def estimate_hyperprior(stage_a_df, global_post, min_k=5,
+                         round_col="pistol_round", side_col="fnc_side"):
+    """
+    Stage B: turn Stage A's per-map (theta_i, v_i) into ONE shared hyperprior
+    per (round, side) cell, via DerSimonian-Laird tau2 estimation.
+
+    global_post: the fit_global() output -- used as the tau2==0 fallback
+    (see module docstring; this specific fallback choice is not finalized,
+    revisit if needed).
+
+    min_k: below this many maps in a cell, tau2 is flagged as unreliable
+    (soft flag only -- row is still returned, just marked low_k_flag=True).
+    """
+    rows = []
+    for (rnd, side), cell in stage_a_df.groupby([round_col, side_col]):
+        theta = cell["theta_i"].to_numpy()
+        v = cell["v_i"].to_numpy()
+        k = len(cell)
+
+        # --- naive (fixed-effect) pooling: intermediate only, feeds Q ---
+        w = 1 / v
+        p_hat = np.sum(w * theta) / np.sum(w)
+        Q = np.sum(w * (theta - p_hat) ** 2)
+        df_ = k - 1
+
+        if df_ <= 0:
+            # single map in this cell -- no basis for a tau2 estimate at all
+            tau2 = 0.0
+        else:
+            C = np.sum(w) - np.sum(w ** 2) / np.sum(w)
+            tau2 = max(0.0, (Q - df_) / C) if C > 0 else 0.0
+
+        # --- random-effects (final) pooling: the real pooled mean ---
+        w_star = 1 / (v + tau2)
+        p_hat_star = np.sum(w_star * theta) / np.sum(w_star)
+
+        ceiling = p_hat_star * (1 - p_hat_star)
+        tau2_clipped = False
+        tau2_used = tau2
+
+        g_alpha = global_post.loc[(rnd, side), "alpha_post"]
+        g_beta = global_post.loc[(rnd, side), "beta_post"]
+
+        if tau2 == 0.0:
+            # No detectable between-map heterogeneity. M is undefined
+            # (division by zero) -- fall back to fit_global's posterior
+            # for this cell as the hyperprior. See module docstring: this
+            # fallback choice is one option from the notes, not finalized.
+            alpha_hyper, beta_hyper = g_alpha, g_beta
+            M = alpha_hyper + beta_hyper
+        else:
+            if tau2 >= ceiling:
+                tau2_used = 0.999 * ceiling
+                tau2_clipped = True
+            M = p_hat_star * (1 - p_hat_star) / tau2_used - 1
+            alpha_hyper = p_hat_star * M
+            beta_hyper = (1 - p_hat_star) * M
+
+        rows.append({
+            "pistol_round": rnd,
+            "fnc_side": side,
+            "k": k,
+            "df": df_,
+            "Q": Q,
+            "tau2": tau2,
+            "tau2_used": tau2_used,
+            "tau2_clipped": tau2_clipped,
+            "p_hat_star": p_hat_star,
+            "M": M,
+            "alpha_hyper": alpha_hyper,
+            "beta_hyper": beta_hyper,
+            "low_k_flag": k < min_k,
+        })
+    return pd.DataFrame(rows).set_index([round_col, side_col])
+
+
+# ---------------------------------------------------------------------------
+# Stage C -- final per-map posterior, using the Stage B hyperprior.
+# ---------------------------------------------------------------------------
+
+def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95,
+                       round_col="pistol_round", side_col="fnc_side"):
+    """
+    Stage C: ordinary conjugate update per map, using the SHARED hyperprior
+    from Stage B as the prior, and that map's own raw wins_i/losses_i as
+    the data. This -- not the BLUP formula -- is the actual final per-map
+    number that should feed montecarlo.py / visualize.py.
+    """
+    lo_q, hi_q = (1 - ci) / 2, 1 - (1 - ci) / 2
+    rows = []
+    for _, row in stage_a_df.iterrows():
+        key = (row[round_col], row[side_col])
+        h = hyperprior_df.loc[key]
+        a_final = h["alpha_hyper"] + row["wins_i"]
+        b_final = h["beta_hyper"] + row["losses_i"]
+        rows.append({
+            "pistol_round": row[round_col],
+            "fnc_side": row[side_col],
+            "map_name": row["map_name"],
+            "n_i": row["n_i"],
+            "alpha_final": a_final,
+            "beta_final": b_final,
+            "posterior_mean": a_final / (a_final + b_final),
+            "ci_lower": beta_dist.ppf(lo_q, a_final, b_final),
+            "ci_upper": beta_dist.ppf(hi_q, a_final, b_final),
+            "low_k_flag": h["low_k_flag"],
+            "tau2_clipped": h["tau2_clipped"],
+        })
     return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
 # Example usage:
 #
-#   per_round_map_df = pd.read_csv("per_round_per_map.csv")  # you'd build this
-#   global_post = fit_global(per_round_map_df)
-#   map_results = fit_per_map(per_round_map_df, global_post)
-#   print(map_results.sort_values("shrinkage_weight", ascending=False))
+#   per_round_map_df = pd.read_csv("per_round_per_map.csv")
+#   global_post   = fit_global(per_round_map_df)
+#   stage_a       = fit_per_map_jeffreys(per_round_map_df, active_maps=ACTIVE_MAPS)
+#   hyperprior    = estimate_hyperprior(stage_a, global_post)
+#   final_results = fit_per_map_final(stage_a, hyperprior)
 #
-# Read shrinkage_weight alongside posterior_mean: a map showing an extreme
-# posterior_mean but with shrinkage_weight near 0 just means "don't trust
-# this yet, we've barely seen it" -- exactly the failure mode naive per-map
-# splitting hides.
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# UPGRADE PATH: full hierarchical model (only if the cascade above feels too
-# ad hoc, e.g. you want the between-map variance itself to be estimated
-# rather than fixed by the global prior's concentration). Sketch with PyMC:
-#
-#   import pymc as pm
-#
-#   with pm.Model():
-#       mu = pm.Normal("mu", 0, 1.5)              # global logit-scale rate
-#       sigma_map = pm.HalfNormal("sigma_map", 1) # between-map spread
-#       map_offset = pm.Normal("map_offset", 0, 1, shape=n_maps)
-#       p = pm.Deterministic("p", pm.math.sigmoid(mu + sigma_map * map_offset))
-#       pm.Binomial("obs", n=n_pistols_per_map, p=p[map_idx], observed=wins_per_map)
-#       trace = pm.sample(2000, tune=1000, target_accept=0.9)
-#
-# This lets sigma_map be small if maps barely differ (pooling everything)
-# or large if they genuinely diverge (pooling less) -- the cascade version
-# above assumes a fixed amount of pooling instead of learning it. Worth
-# doing only once you have enough maps (5+) with reasonable pistol counts
-# each to actually estimate sigma_map sensibly.
+# Read low_k_flag and tau2_clipped alongside posterior_mean -- either one
+# being True means "treat this cell's map-level split with extra caution,"
+# the same spirit as ci_width flagging thin cells elsewhere in the pipeline.
 # ---------------------------------------------------------------------------
