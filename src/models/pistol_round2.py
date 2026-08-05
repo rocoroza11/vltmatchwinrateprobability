@@ -35,9 +35,13 @@ def pistol_round2_probabilities(rounds_df):
         subset["fnc_side"] = side_pivot[pistol_round]
         subset = subset.dropna(subset=["fnc_side"])
 
+        subset = subset.reset_index()
+
          # condition on side: split the pistol-round cell in two
-        for side, side_group in subset.groupby("fnc_side"):
-            pistol_wins = side_group[side_group["won_pistol"] == True]
+        for (side, map_name), group in subset.groupby(["fnc_side", "map_name"]):
+            # given a map name i, have counter on pistol_wins on that map
+            
+            pistol_wins = group[group["won_pistol"] == True]
             if len(pistol_wins) == 0:
                 continue
 
@@ -46,6 +50,7 @@ def pistol_round2_probabilities(rounds_df):
 
             results.append({
                 "pistol_round": pistol_round,
+                "map_name" : map_name,
                 "fnc_side": side,
                 "n_pistol_wins": n_pistol_wins,
                 "n_win_round2": n_win_round2,
