@@ -1,8 +1,10 @@
 import pandas as pd
-
 from models.pistol_round2 import pistol_round2_probabilities
 
+# testing if resulting dataframe is map and side conditioned
 def test_pistol_round2_probabilities_are_map_and_side_conditioned():
+
+    # create dummy df consistent with production df
     rounds_df = pd.DataFrame(
         [
             {
@@ -78,8 +80,10 @@ def test_pistol_round2_probabilities_are_map_and_side_conditioned():
         ]
     )
 
+    # return "result" dataframe
     result = pistol_round2_probabilities(rounds_df)
 
+    # convert result dataframe into dict for easy comparison 
     conditioned = {
         (row.map_name, row.fnc_side): (
             row.n_pistol_wins,
@@ -89,6 +93,7 @@ def test_pistol_round2_probabilities_are_map_and_side_conditioned():
         for row in result.itertuples()
     }
 
+    # verify that the calculated metrics matches the expected values 
     assert conditioned == {
         ("Ascent", "attack"): (2, 1, 0.5),
         ("Ascent", "defense"): (1, 1, 1.0),
