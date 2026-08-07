@@ -1,5 +1,5 @@
 from pipeline.pandasfile import load_rounds_dataframe
-from models.pistol_round2 import pistol_round2_probabilities
+from models.pistol_round2 import pistol_round2_probabilities, pool_by_side
 from interface import file_load
 
 from scipy.stats import beta
@@ -36,6 +36,7 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
     rounds_df = load_rounds_dataframe(game_file)
     result_dataframe = pistol_round2_probabilities(rounds_df)
+    result_dataframe = pool_by_side(result_dataframe)
 
     wins = result_dataframe["n_win_round2"]
     losses = result_dataframe["n_pistol_wins"] - wins
@@ -50,6 +51,8 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
         prior_alpha = global_mean * n0
         prior_beta = (1 - global_mean) * n0
+
+    print(wins.dtype, losses.dtype, type(prior_alpha), type(prior_beta))
 
     alpha_post, beta_post, posterior = beta_posterior(wins, losses, prior_alpha, prior_beta)
 

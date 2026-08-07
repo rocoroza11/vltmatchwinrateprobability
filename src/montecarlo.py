@@ -2,8 +2,6 @@ from scipy.stats import beta
 import numpy as np
 import pandas as pd
 
-
-
 def simulate_round2_wins(result_dataframe, n_trials=10_000, random_state=None):
     """
     For each cell (row) in result_dataframe, draw n_trials samples from its
