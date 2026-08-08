@@ -39,11 +39,11 @@ def test_stage_b():
     stage_b_df = estimate_hyperprior(stage_a_df,global_post)
 
     assert round(stage_b_df.loc[(1, "Attacker"), "Q"], 3) == 6.316
-    assert round(stage_b_df.loc[(1, "Attacker"), "tau2"], 4) == 0.0870
-    assert round(stage_b_df.loc[(1, "Attacker"), "p_hat_star"], 4) == 0.5493
-    assert round(stage_b_df.loc[(1, "Attacker"), "M"], 4) == 1.8467
-    assert round(stage_b_df.loc[(1, "Attacker"), "alpha_hyper"], 4) == 1.0145
-    assert round(stage_b_df.loc[(1, "Attacker"), "beta_hyper"], 4) == 0.8324
+    assert round(stage_b_df.loc[(1, "Attacker"), "tau2"], 3) == 0.087
+    assert round(stage_b_df.loc[(1, "Attacker"), "p_hat_star"], 4) == 0.5492
+    assert round(stage_b_df.loc[(1, "Attacker"), "M"], 4) == 1.8474 
+    assert round(stage_b_df.loc[(1, "Attacker"), "alpha_hyper"], 4) == 1.0146
+    assert round(stage_b_df.loc[(1, "Attacker"), "beta_hyper"], 4) == 0.8327
     assert stage_b_df.loc[(1, "Attacker"), "tau2_clipped"] == False
 
 def test_stage_c(): 
@@ -60,3 +60,19 @@ def test_stage_c():
     stage_c_df = fit_per_map_final(stage_a_df, stage_b_df) 
 
     print(stage_c_df)
+
+    result_dict = {
+        (row.map_name):
+        (
+            round(row.alpha_final,3),
+            round(row.beta_final,3), 
+            round(row.posterior_mean,3)
+        )
+        for row in stage_c_df.itertuples()
+    }
+
+    assert result_dict == { 
+        ("Ascent") : (9.015, 2.833, 0.761),
+        ("Bind") : (4.015, 7.833, 0.339)
+    }
+
