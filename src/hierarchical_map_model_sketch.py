@@ -41,6 +41,7 @@ GLOBAL_PRIOR_BETA = 1.0169491525423724
 
 def fit_global(df, round_col="pistol_round", side_col="fnc_side",
                wins_col="wins", losses_col="losses"):
+    
     """Identical to your current pooled fit. Ignores map_name."""
     grp = df.groupby([round_col, side_col])[[wins_col, losses_col]].sum()
     grp["alpha_post"] = GLOBAL_PRIOR_ALPHA + grp[wins_col]
@@ -102,8 +103,8 @@ def fit_per_map_jeffreys(df, active_maps=None, map_col="map_name",
 # Stage B -- DerSimonian-Laird hyperprior estimation, per (round, side) cell.
 # ---------------------------------------------------------------------------
 
-def estimate_hyperprior(stage_a_df, global_post, min_k=5,
-                         round_col="pistol_round", side_col="fnc_side"):
+def estimate_hyperprior(stage_a_df, global_post, min_k=5, round_col="pistol_round", side_col="fnc_side"):
+
     """
     Stage B: turn Stage A's per-map (theta_i, v_i) into ONE shared hyperprior
     per (round, side) cell, via DerSimonian-Laird tau2 estimation.
@@ -115,6 +116,7 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5,
     min_k: below this many maps in a cell, tau2 is flagged as unreliable
     (soft flag only -- row is still returned, just marked low_k_flag=True).
     """
+
     rows = []
     for (rnd, side), cell in stage_a_df.groupby([round_col, side_col]):
         theta = cell["theta_i"].to_numpy()
@@ -146,10 +148,12 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5,
         g_beta = global_post.loc[(rnd, side), "beta_post"]
 
         if tau2 == 0.0:
+
             # No detectable between-map heterogeneity. M is undefined
             # (division by zero) -- fall back to fit_global's posterior
             # for this cell as the hyperprior. See module docstring: this
             # fallback choice is one option from the notes, not finalized.
+
             alpha_hyper, beta_hyper = g_alpha, g_beta
             M = alpha_hyper + beta_hyper
         else:
@@ -175,6 +179,7 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5,
             "beta_hyper": beta_hyper,
             "low_k_flag": k < min_k,
         })
+
     return pd.DataFrame(rows).set_index([round_col, side_col])
 
 
@@ -182,14 +187,15 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5,
 # Stage C -- final per-map posterior, using the Stage B hyperprior.
 # ---------------------------------------------------------------------------
 
-def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95,
-                       round_col="pistol_round", side_col="fnc_side"):
+def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95, round_col="pistol_round", side_col="fnc_side"):
+
     """
     Stage C: ordinary conjugate update per map, using the SHARED hyperprior
     from Stage B as the prior, and that map's own raw wins_i/losses_i as
     the data. This -- not the BLUP formula -- is the actual final per-map
     number that should feed montecarlo.py / visualize.py.
     """
+    
     lo_q, hi_q = (1 - ci) / 2, 1 - (1 - ci) / 2
     rows = []
     for _, row in stage_a_df.iterrows():
