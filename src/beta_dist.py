@@ -6,6 +6,8 @@ from scipy.stats import beta
 import pandas as pd
 
 
+
+
 def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
     alpha_post = prior_alpha + wins

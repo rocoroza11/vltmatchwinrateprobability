@@ -78,3 +78,14 @@ def pool_by_side(results_df):
     )
     pooled["p_win_round2_given_pistol"] = pooled["n_win_round2"] / pooled["n_pistol_wins"]
     return pooled
+
+def split_by_map(results_df):
+
+    """
+    splits by map (help me write something more accurate here)
+    """
+
+    out = results_df[["pistol_round", "fnc_side", "map_name", "n_pistol_wins", "n_win_round2"]].copy()
+    out = out.rename(columns={"n_win_round2" : "wins"})
+    out["losses"] = out["n_pistol_wins"] - out["wins"]
+    return out[["pistol_round", "fnc_side", "map_name", "wins", "losses"]]

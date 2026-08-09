@@ -41,14 +41,21 @@ GLOBAL_PRIOR_ALPHA = 8.983050847457628
 GLOBAL_PRIOR_BETA = 1.0169491525423724
 
 
-def fit_global(df, round_col="pistol_round", side_col="fnc_side",
-               wins_col="wins", losses_col="losses"):
+def fit_global(df, round_col="pistol_round", side_col="fnc_side", wins_col="wins", losses_col="losses"):
     
     """Identical to your current pooled fit. Ignores map_name."""
     grp = df.groupby([round_col, side_col])[[wins_col, losses_col]].sum()
     grp["alpha_post"] = GLOBAL_PRIOR_ALPHA + grp[wins_col]
     grp["beta_post"] = GLOBAL_PRIOR_BETA + grp[losses_col]
     return grp
+
+def moment_inversion(p_hat_star, tau2_used):
+
+    M = (p_hat_star * (1-p_hat_star)) / (tau2_used) - 1
+    alpha_hyper = (p_hat_star * M)
+    beta_hyper= (1-p_hat_star) * M
+
+    return alpha_hyper, beta_hyper
 
 
 # ---------------------------------------------------------------------------
@@ -149,21 +156,22 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5, round_col="pistol_roun
         g_beta = global_post.loc[(rnd, side), "beta_post"]
 
         if tau2 == 0.0:
-
             # No detectable between-map heterogeneity. M is undefined
             # (division by zero) -- fall back to fit_global's posterior
-            # for this cell as the hyperprior. See module docstring: this
-            # fallback choice is one option from the notes, not finalized.
+            # for this cell as the hyperprior. 
 
             alpha_hyper, beta_hyper = g_alpha, g_beta
-            M = alpha_hyper + beta_hyper
-        else:
-            if tau2 >= ceiling:
-                tau2_used = 0.999 * ceiling
-                tau2_clipped = True
-            M = p_hat_star * (1 - p_hat_star) / tau2_used - 1
-            alpha_hyper = p_hat_star * M
-            beta_hyper = (1 - p_hat_star) * M
+            M_ = alpha_hyper + beta_hyper
+
+        elif tau2 >= ceiling:
+            tau2_used = 0.999 * ceiling
+            tau2_clipped = True
+            alpha_hyper, beta_hyper = moment_inversion(p_hat_star, tau2_used)
+            M_ = alpha_hyper + beta_hyper
+
+        else: 
+            alpha_hyper, beta_hyper = moment_inversion(p_hat_star, tau2_used)
+            M_ = alpha_hyper + beta_hyper
 
         rows.append({
             "pistol_round": rnd,
@@ -175,7 +183,7 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5, round_col="pistol_roun
             "tau2_used": tau2_used,
             "tau2_clipped": tau2_clipped,
             "p_hat_star": p_hat_star,
-            "M": M,
+            "M": M_,
             "alpha_hyper": alpha_hyper,
             "beta_hyper": beta_hyper,
             "low_k_flag": k < min_k,
@@ -202,7 +210,6 @@ def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95, round_col="pistol_roun
     for _, row in stage_a_df.iterrows():
         key = (row[round_col], row[side_col])
         h = hyperprior_df.loc[key]
-
         alpha_hyper = h["alpha_hyper"]
         beta_hyper = h["beta_hyper"]
         wins_i = row["wins_i"]
