@@ -1,12 +1,19 @@
 from pipeline.pandasfile import load_rounds_dataframe
-from models.pistol_round2 import pistol_round2_probabilities, pool_by_side
+from models.pistol_round2 import pistol_round2_probabilities, pool_by_side, split_by_map
 from interface import file_load
 
 from scipy.stats import beta
 import pandas as pd
 
 
+def load_pistol_results(game_file):
 
+    file_loaded = file_load(game_file)
+    if not file_loaded:
+        raise FileNotFoundError(f"Could not load game file: {game_file}")
+
+    rounds_df = load_rounds_dataframe(game_file)
+    return pistol_round2_probabilities(rounds_df)
 
 def beta_posterior(wins, losses, prior_alpha, prior_beta):
 
@@ -16,7 +23,7 @@ def beta_posterior(wins, losses, prior_alpha, prior_beta):
     return alpha_post, beta_post, beta(alpha_post, beta_post)
 
 
-def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=10):
+def analyze_pistol_conversions(results_df, prior_alpha=None, prior_beta=None, n0=10):
     
     """
     Compute Beta posteriors for pistol-round -> round-2 conversion.
@@ -32,13 +39,7 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
     prior_beta, posterior mean, and 95% credible interval bounds/width.
     """
 
-    file_loaded = file_load(game_file)
-    if not file_loaded:
-        raise FileNotFoundError(f"Could not load game file: {game_file}")
-
-    rounds_df = load_rounds_dataframe(game_file)
-    result_dataframe = pistol_round2_probabilities(rounds_df)
-    result_dataframe = pool_by_side(result_dataframe)
+    result_dataframe = pool_by_side(results_df)
 
     wins = result_dataframe["n_win_round2"]
     losses = result_dataframe["n_pistol_wins"] - wins
@@ -71,3 +72,6 @@ def analyze_pistol_conversions(game_file, prior_alpha=None, prior_beta=None, n0=
 
     return result_dataframe
 
+def build_per_map_table(results_df):
+
+    return split_by_map(results_df)
