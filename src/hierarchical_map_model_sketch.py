@@ -1,3 +1,5 @@
+from beta_dist import beta_posterior
+
 """
 Per-map partial pooling on top of the existing pistol-round pipeline.
 
@@ -59,9 +61,7 @@ JEFFREYS_ALPHA = 0.5
 JEFFREYS_BETA = 0.5
 
 
-def fit_per_map_jeffreys(df, active_maps=None, map_col="map_name",
-                          round_col="pistol_round", side_col="fnc_side",
-                          wins_col="wins", losses_col="losses"):
+def fit_per_map_jeffreys(df, active_maps=None, map_col="map_name", round_col="pistol_round", side_col="fnc_side", wins_col="wins", losses_col="losses"):
     """
     Stage A: independent Jeffreys-prior fit per map, per (round, side) cell.
 
@@ -82,10 +82,11 @@ def fit_per_map_jeffreys(df, active_maps=None, map_col="map_name",
         for map_name, m in sub.groupby(map_col):
             wins_i = m[wins_col].sum()
             losses_i = m[losses_col].sum()
-            a_i = JEFFREYS_ALPHA + wins_i
-            b_i = JEFFREYS_BETA + losses_i
-            theta_i = a_i / (a_i + b_i)
-            v_i = (a_i * b_i) / ((a_i + b_i) ** 2 * (a_i + b_i + 1))
+
+            a_i, b_i, posterior_i = beta_posterior(wins_i, losses_i, JEFFREYS_ALPHA, JEFFREYS_BETA)
+            theta_i = posterior_i.mean()
+            v_i = posterior_i.var()
+            
             rows.append({
                 "pistol_round": rnd,
                 "fnc_side": side,
@@ -195,14 +196,21 @@ def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95, round_col="pistol_roun
     the data. This -- not the BLUP formula -- is the actual final per-map
     number that should feed montecarlo.py / visualize.py.
     """
-    
+
     lo_q, hi_q = (1 - ci) / 2, 1 - (1 - ci) / 2
     rows = []
     for _, row in stage_a_df.iterrows():
         key = (row[round_col], row[side_col])
         h = hyperprior_df.loc[key]
-        a_final = h["alpha_hyper"] + row["wins_i"]
-        b_final = h["beta_hyper"] + row["losses_i"]
+
+        alpha_hyper = h["alpha_hyper"]
+        beta_hyper = h["beta_hyper"]
+        wins_i = row["wins_i"]
+        losses_i = row["losses_i"]
+
+        a_final, b_final, posterior_i = beta_posterior(wins_i, losses_i, alpha_hyper, beta_hyper)
+        posterior_mean = posterior_i.mean()
+
         rows.append({
             "pistol_round": row[round_col],
             "fnc_side": row[side_col],
@@ -210,7 +218,7 @@ def fit_per_map_final(stage_a_df, hyperprior_df, ci=0.95, round_col="pistol_roun
             "n_i": row["n_i"],
             "alpha_final": a_final,
             "beta_final": b_final,
-            "posterior_mean": a_final / (a_final + b_final),
+            "posterior_mean": posterior_mean,
             "ci_lower": beta_dist.ppf(lo_q, a_final, b_final),
             "ci_upper": beta_dist.ppf(hi_q, a_final, b_final),
             "low_k_flag": h["low_k_flag"],
