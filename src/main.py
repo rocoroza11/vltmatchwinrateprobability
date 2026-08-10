@@ -17,6 +17,11 @@ per_map_df = build_per_map_table(results_df)
 global_post = fit_global(per_map_df) # Stage 0 
 stage_a = fit_per_map_jeffreys(per_map_df) 
 hyperprior = estimate_hyperprior(stage_a, global_post)
+
+print(hyperprior["tau2_used"])
+print(hyperprior["k"])
+print(hyperprior["M"])
+
 final_priors = fit_per_map_final(stage_a, hyperprior)
 
 #mc_result = simulate_round2_wins(beta_result) #monte-carlo pipeline
