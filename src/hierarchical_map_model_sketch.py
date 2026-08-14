@@ -160,7 +160,8 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5, round_col="pistol_roun
             # (division by zero) -- fall back to fit_global's posterior
             # for this cell as the hyperprior. 
 
-            alpha_hyper, beta_hyper = g_alpha, g_beta
+            # updated now as we've detected and ran that there is NO reasonable between-map heterogeneity
+            alpha_hyper, beta_hyper = GLOBAL_PRIOR_ALPHA, GLOBAL_PRIOR_BETA
             M_ = alpha_hyper + beta_hyper
 
         elif tau2 >= ceiling:
