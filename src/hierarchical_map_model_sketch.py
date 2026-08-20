@@ -152,15 +152,13 @@ def estimate_hyperprior(stage_a_df, global_post, min_k=5, round_col="pistol_roun
         tau2_clipped = False
         tau2_used = tau2
 
-        g_alpha = global_post.loc[(rnd, side), "alpha_post"]
-        g_beta = global_post.loc[(rnd, side), "beta_post"]
-
         if tau2 == 0.0:
             # No detectable between-map heterogeneity. M is undefined
             # (division by zero) -- fall back to fit_global's posterior
             # for this cell as the hyperprior. 
 
             # updated now as we've detected and ran that there is NO reasonable between-map heterogeneity
+            # no jefferys in Stage C as v is != 0; thus, falling back to the global prior is better.
             alpha_hyper, beta_hyper = GLOBAL_PRIOR_ALPHA, GLOBAL_PRIOR_BETA
             M_ = alpha_hyper + beta_hyper
 
