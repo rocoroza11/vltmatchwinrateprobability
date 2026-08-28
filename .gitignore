@@ -1,0 +1,20 @@
+# to avoid re-writing results constantly in the repo
+data/results/
+
+.vscode/
+
+# virtual environment
+.venv/
+
+# python bytecode/cache
+__pycache__/
+*.pyc
+
+# pytest
+.pytest_cache/
+
+# jupyter
+.ipynb_checkpoints/
+
+# OS cruft
+.DS_Store
