@@ -28,7 +28,6 @@ def analyze_pistol_conversions(results_df, prior_alpha=None, prior_beta=None, n0
     """
     Compute Beta posteriors for pistol-round -> round-2 conversion.
 
-    game_file: path to the raw rounds JSON.
     prior_alpha, prior_beta: optional explicit prior. Must be supplied together.
         If omitted, a shrinkage prior is derived from the pooled global mean
         across all cells, weighted by n0 pseudo-observations.
