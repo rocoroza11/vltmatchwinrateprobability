@@ -1,10 +1,10 @@
 import os 
 import pandas as pd
-from beta_dist import analyze_pistol_conversions, build_per_map_table, load_pistol_results
-from hierarchical_map_model_sketch import fit_global, fit_per_map_jeffreys, estimate_hyperprior, fit_per_map_final
-from montecarlo import simulate_round2_wins, melt_mc_draws, validate_mc_against_posterior, Pr1_Pr13
-from interface import file_write
-from visualisation import draw_dist
+from pipeline.beta_dist import analyze_pistol_conversions, build_per_map_table, load_pistol_results
+from pipeline.hierarchical_map_model_sketch import fit_global, fit_per_map_jeffreys, estimate_hyperprior, fit_per_map_final
+from pipeline.montecarlo import simulate_round2_wins, melt_mc_draws, validate_mc_against_posterior, Pr1_Pr13
+from pipeline.interface import file_write
+from pipeline.visualisation import draw_dist
 
 HERE = os.path.dirname(__file__)
 game_file = os.path.join(HERE, "rounds_raw.json")

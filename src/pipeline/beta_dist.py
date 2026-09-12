@@ -1,5 +1,5 @@
 from pipeline.pandasfile import load_rounds_dataframe
-from models.pistol_round2 import pistol_round2_probabilities, pool_by_side, split_by_map
+from pipeline.pistol_round2 import pistol_round2_probabilities, pool_by_side, split_by_map
 from interface import file_load
 
 from scipy.stats import beta

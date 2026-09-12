@@ -4,11 +4,11 @@ from dataclasses import asdict
 
 team_id = 2593
 
-team = vlr.teams.info(team_id=team_id)
-completed = vlr.teams.completed_matches(team_id=team_id, limit=20)
+team = vlr.team.info(team_id=team_id)
+completed = vlr.team.completed_matches(team_id=team_id)
 
 matches_data = []
-for match in completed:
+for match in completed.matches[:10]:
     if not match.match_id:
         continue
 
@@ -46,7 +46,7 @@ output = {
     "matches": matches_data,
 }
 
-with open("rounds_raw.json", "w", encoding="utf-8") as f:
+with open("empty.json", "w", encoding="utf-8") as f:
     json.dump(output, f, indent=2, ensure_ascii=False)
 
 print(f"Wrote {len(matches_data)} matches with round data to rounds_raw.json")

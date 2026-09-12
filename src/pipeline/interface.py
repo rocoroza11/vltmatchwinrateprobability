@@ -1,5 +1,3 @@
-#67676767
-
 import os 
 import pandas as pd
 

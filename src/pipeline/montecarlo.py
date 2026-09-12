@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 def simulate_round2_wins(result_dataframe, n_trials=10_000, random_state=None):
+
     """
     For each cell (row) in result_dataframe, draw n_trials samples from its
     posterior Beta(alpha_post, beta_post), then simulate a round-2 win/loss
@@ -11,6 +12,7 @@ def simulate_round2_wins(result_dataframe, n_trials=10_000, random_state=None):
     Returns result_dataframe with an added 'simulated_p_win_round2' column
     containing an (n_trials,) array of sampled win probabilities per cell.
     """
+    
     rng = np.random.default_rng(random_state)
 
     simulated = []
